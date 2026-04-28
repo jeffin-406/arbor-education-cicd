@@ -1,0 +1,10 @@
+services:
+  react-app:
+    container_name: react-app-${VITE_APP_ENV}
+    build:
+      context: .
+      args:
+        - VITE_APP_ENV=${VITE_APP_ENV}
+    ports:
+      - "${PORT}:80"
+    restart: always

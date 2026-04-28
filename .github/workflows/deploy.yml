@@ -1,0 +1,34 @@
+name: Self-Hosted Deployment
+
+on:
+  push:
+    branches: [main, dev]
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, arbor-education]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set Environment Context
+        run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            echo "ENV_TAG=production" >> $GITHUB_ENV
+            echo "PORT=3000" >> $GITHUB_ENV
+          else
+            echo "ENV_TAG=development" >> $GITHUB_ENV
+            echo "PORT=3001" >> $GITHUB_ENV
+          fi
+
+      - name: Build and Run with Docker Compose
+        env:
+          # Pulling from GitHub Repository Secrets
+          VITE_APP_ENV: ${{ env.ENV_TAG }}
+          MY_SECRET_KEY: ${{ secrets.MY_SECRET_KEY }} 
+        run: |
+          # Use the env file or pass vars directly to compose
+          docker compose up -d --build --remove-orphans
+
+      - name: Cleanup Old Images
+        run: docker image prune -f
