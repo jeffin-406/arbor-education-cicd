@@ -34,6 +34,58 @@ jobs:
         run: |
           # Docker Compose automatically looks for the .env file in the current folder
           docker compose up -d --build --remove-orphans
+      - name: Slack Notify
+        if: always()
+        run: |
+          # Set variables based on job status
+          if [[ "${{ job.status }}" == "success" ]]; then
+            COLOR="#2EB67D"
+            ICON="✅"
+            STATUS="Success"
+          else
+            COLOR="#E01E5A"
+            ICON="❌"
+            STATUS="Failed"
+          fi
+          # Construct the JSON payload
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{
+            "attachments": [
+              {
+                "color": "'"$COLOR"'",
+                "blocks": [
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "'"$ICON"' *Deployment '"$STATUS"'* | *Build:* #${{ github.run_number }}"
+                    }
+                  },
+                  {
+                    "type": "divider"
+                  },
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "📂 *Repository:* ${{ github.repository }}\n🌿 *Branch:* `${{ github.ref_name }}`\n👤 *Actor:* ${{ github.actor }}\n⚙️ *Event:* `${{ github.event_name }}`"
+                    }
+                  },
+                  {
+                    "type": "actions",
+                    "elements": [
+                      {
+                        "type": "button",
+                        "text": { "type": "plain_text", "text": "🔍 View Logs" },
+                        "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }' ${{ secrets.SLACK_WEBHOOK }}
+          
 
       - name: Post-build Cleanup
         # Important for self-hosted: don't leave the .env file sitting on the server
